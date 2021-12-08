@@ -1,0 +1,186 @@
+---
+title: "TASK2"
+author: "Yuli Jin"
+date: "2021/12/7"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=F,message = F,echo=F,highlight=F)
+#knitr::opts_chunk$set(echo = TRUE,out.width="0.9\\linewidth",dev="png",fig.align  = 'center')
+knitr::opts_chunk$set(fig.width=6, fig.height=4,fig.align = "center") 
+pacman::p_load(
+tidyverse,
+magrittr,
+knitr,
+gutenbergr,
+tidytext,
+sentimentr
+)
+
+
+
+```
+
+## Task 1 Pick a book
+
+I choose `The Burning Secret` as the my text analysis. This book was written by Zweug, Stefan.
+
+```{r}
+# gutenberg_metadata
+# gutenberg_works(str_detect(author, "Zweig")) #find author's book 
+my_book=gutenberg_download(c(45755)) # download the book
+#write.table(my_book,'testbook2.txt',row.names = F)
+```
+
+```{r}
+# this chunk is used to set tnum database and source the function
+library(tnum)
+tnum.authorize("mssp1.bu.edu")
+tnum.setSpace("test2")
+source("Book2TN-v6A-1.R")
+
+```
+
+```{r}
+#This chunk is used to put my book into tnum
+#mybook<-read_lines('testbook.txt')
+mybook<-read.table('testbookv2.txt',header = T)
+#tnBooksFromLines(mybook$text, "Zweig/test2")
+```
+
+## TASK 2 bag of word analysis
+
+First, I use three types of sentiment analysis methods AFINN, Bing and NRC to plot barplot to compare these methods. From the graph below, the AFINN and Bing method fits better. Most of the polt in `The Burning Secret` is in negative. In this book, While being treated for asthma at a country spa, an American diplomat's lonely 12-year-old son is befriended and infatuated by a suave, mysterious baron. But soon his adored friend heartlessly brushes him aside and turns his seductive attentions to his mother. The boy's jealousy and feelings of betrayal become uncontrollable. The story is set in Austria in the 1920s. That is to say, at the beginning of the book, the sentiment of the book is positive, but soon it converts into negative sentiment. However, it is difficult to identify which of the two methods is better. In the following task, I use Bing method to conduct further analysis.
+
+```{r}
+# creat tidy book:
+# linenumber is used to get row number_of_photo_plot
+# chapter is used to find chapter cunsum get the chapter number
+
+tidy_books <- my_book %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  unnest_tokens(word, text)
+```
+
+
+```{r}
+# use afinn to get the sentiment score
+# index is used by linenumber%/%80
+# get the final score with positive-negative
+afinn <- tidy_books %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+# use bing and nrc to get the sentiment score
+bing_and_nrc <- bind_rows(
+  tidy_books %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  tidy_books %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r fig.cap="sentiment plot"}
+# combine 3 lexicon to plot 
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")+
+  theme_bw()
+```
+
+```{r}
+#count positive and negative words
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+
+```{r fig.width=6, fig.height=2,fig.cap="negative positive words count"}
+# plot the negative frequency and positive frequency repectively
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)+
+  theme_bw()
+```
+
+Figure 2 shows negative and positive word count of each word. For the negative chart, dark is the most common words throughout the whole book. Hate and darkness rank the second and third place respectively. For the positive chart, like is the most common words throughout the whole book. Great and good rank the second and third place respectively.
+
+
+```{r fig.width=6, fig.height=4,fig.cap='word cloud'}
+library(wordcloud)
+# set seed to control the same plot
+set.seed(123)
+# use wordcloud package to plot wordcloud
+tidy_books %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+Figure 3 displays word cloud which shows the frequency. As we can see, baron, mother, edgar are the most frequency words among all the words. It is reasonable because they are the main characters in that fiction book. In task 3, I will use two of three characters to conduct further analysis.
+
+
+```{r fig.width=6, fig.height=4,fig.cap="sentiment word cloud"}
+# plot negative and positive plot
+library(reshape2)
+
+tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("Blue", "Green"),
+                   max.words = 100)
+```
+
+Figure 4 generally converts Figure 2's information into word cloud  
+
+## Task 2 extra credit
+
+In `textdata` package, there are one extra lexicons available to use. This lexicons is called `Loughran-McDonald`. Here I use this new method and plot the similar graph to show the progression from start to finish of the book.
+
+```{r}
+# this is similar to previous code
+# use 
+LM<-tidy_books %>% 
+    inner_join(get_sentiments("loughran")) %>%
+    mutate(method = "Loughran-McDonald")  %>% 
+  count(method, index = linenumber %/% 80, sentiment) %>% 
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+# use ggplot to plot the barplot
+LM%>%ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +labs(title='Loughran-McDonald')+
+  theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Then I provide some description. According to the introduction of [https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html), this lexicon is created for use with financial documents. Therefore, the graph is complete different from previous lexicon graphs. Therefore, this lexicon cannot correctly reflect the exact sentiment of the book. After all, financial sentiment lexicon isn't necessarily suitable for fiction book.
+

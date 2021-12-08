@@ -1,0 +1,407 @@
+---
+title: "Text analysis"
+author: "Yuli Jin"
+date: "2021/11/24"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=F,message = F,echo=F,highlight=F)
+#knitr::opts_chunk$set(echo = TRUE,out.width="0.9\\linewidth",dev="png",fig.align  = 'center')
+knitr::opts_chunk$set(fig.width=6, fig.height=4,fig.align = "center") 
+pacman::p_load(
+tidyverse,
+magrittr,
+knitr,
+gutenbergr,
+tidytext,
+sentimentr
+)
+
+
+
+```
+
+## Task 1 Pick a book
+
+I choose `The Burning Secret` as the my text analysis. This book was written by Zweug, Stefan.
+
+```{r}
+# gutenberg_metadata
+# gutenberg_works(str_detect(author, "Zweig")) #find author's book 
+my_book=gutenberg_download(c(45755)) # download the book
+#write.table(my_book,'testbook2.txt',row.names = F)
+```
+
+```{r}
+# this chunk is used to set tnum database and source the function
+library(tnum)
+tnum.authorize("mssp1.bu.edu")
+tnum.setSpace("test2")
+source("Book2TN-v6A-1.R")
+
+```
+
+```{r}
+#This chunk is used to put my book into tnum
+#mybook<-read_lines('testbook.txt')
+mybook<-read.table('testbookv2.txt',header = T)
+#tnBooksFromLines(mybook$text, "Zweig/test2")
+```
+
+## TASK 2 bag of word analysis
+
+First, I use three types of sentiment analysis methods AFINN, Bing and NRC to plot barplot to compare these methods. From the graph below, the AFINN and Bing method fits better. Most of the polt in `The Burning Secret` is in negative. In this book, While being treated for asthma at a country spa, an American diplomat's lonely 12-year-old son is befriended and infatuated by a suave, mysterious baron. But soon his adored friend heartlessly brushes him aside and turns his seductive attentions to his mother. The boy's jealousy and feelings of betrayal become uncontrollable. The story is set in Austria in the 1920s. That is to say, at the beginning of the book, the sentiment of the book is positive, but soon it converts into negative sentiment. However, it is difficult to identify which of the two methods is better. In the following task, I use Bing method to conduct further analysis.
+
+```{r}
+# creat tidy book:
+# linenumber is used to get row number_of_photo_plot
+# chapter is used to find chapter cunsum get the chapter number
+
+tidy_books <- my_book %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  unnest_tokens(word, text)
+```
+
+
+```{r}
+# use afinn to get the sentiment score
+# index is used by linenumber%/%80
+# get the final score with positive-negative
+afinn <- tidy_books %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+# use bing and nrc to get the sentiment score
+bing_and_nrc <- bind_rows(
+  tidy_books %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  tidy_books %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r fig.cap="sentiment plot"}
+# combine 3 lexicon to plot 
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")+
+  theme_bw()
+```
+
+```{r}
+#count positive and negative words
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+
+```{r fig.width=6, fig.height=2,fig.cap="negative positive words count"}
+# plot the negative frequency and positive frequency repectively
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)+
+  theme_bw()
+```
+
+Figure 2 shows negative and positive word count of each word. For the negative chart, dark is the most common words throughout the whole book. Hate and darkness rank the second and third place respectively. For the positive chart, like is the most common words throughout the whole book. Great and good rank the second and third place respectively.
+
+
+```{r fig.width=6, fig.height=4,fig.cap='word cloud'}
+library(wordcloud)
+# set seed to control the same plot
+set.seed(123)
+# use wordcloud package to plot wordcloud
+tidy_books %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+Figure 3 displays word cloud which shows the frequency. As we can see, baron, mother, edgar are the most frequency words among all the words. It is reasonable because they are the main characters in that fiction book. In task 3, I will use two of three characters to conduct further analysis.
+
+
+```{r fig.width=6, fig.height=4,fig.cap="sentiment word cloud"}
+# plot negative and positive plot
+library(reshape2)
+
+tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("Blue", "Green"),
+                   max.words = 100)
+```
+
+Figure 4 generally converts Figure 2's information into word cloud  
+
+## Task 2 extra credit
+
+In `textdata` package, there are one extra lexicons available to use. This lexicons is called `Loughran-McDonald`. Here I use this new method and plot the similar graph to show the progression from start to finish of the book.
+
+```{r}
+# this is similar to previous code
+# use 
+LM<-tidy_books %>% 
+    inner_join(get_sentiments("loughran")) %>%
+    mutate(method = "Loughran-McDonald")  %>% 
+  count(method, index = linenumber %/% 80, sentiment) %>% 
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+# use ggplot to plot the barplot
+LM%>%ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +labs(title='Loughran-McDonald')+
+  theme_bw()+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Then I provide some description. According to the introduction of [https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html), this lexicon is created for use with financial documents. Therefore, the graph is complete different from previous lexicon graphs. Therefore, this lexicon cannot correctly reflect the exact sentiment of the book. After all, financial sentiment lexicon isn't necessarily suitable for fiction book.
+
+
+
+## task 3 sentence-level analysis
+
+### tnum
+
+First, I put the book into tnum, the following table shows evidence of my tnum database.
+
+```{r echo=T}
+# query heading text to display the head
+q24<- tnum.query('zweig/test2/heading# has text',max=90)
+df24 <- tnum.objectsToDf(q24) # turn the object to df
+knitr::kable(df24 %>% select(subject:numeric.value)%>% head())
+```
+
+
+```{r echo=T}
+# query section and heading text to display the head
+q26<- tnum.query('zweig/test2# has text',max=60)
+df26 <- tnum.objectsToDf(q26) # turn the object to df
+df26 %>% select(subject:string.value)%>% head()
+
+```
+
+Then I use sentimentr to get sentiment score group by these scores with section to get the average result. The plot sort the average sentiment score from high to low.
+
+```{r}
+# query section text
+df27<- tnum.query('zweig/test2/section# has text',max=7000) %>% tnum.objectsToDf()
+#df27 %>% view()
+# separate the subject
+book_sentence<-df27 %>% separate(col=subject,
+                  into = c("path1", "path2","section","paragraph","sentence"), 
+                  sep = "/", 
+                  fill = "right") %>% 
+  select(section:string.value)
+
+#detect the section paragraoh and sentence number and convert it from character into numeric
+book_sentence<-book_sentence %>% mutate_at(c('section','paragraph','sentence'),~str_extract_all(.,"\\d+") %>% unlist() %>% as.numeric())
+# use sentimentr to get sentiment score group by these scores with section to get the average result
+sentence_out<-book_sentence %>% dplyr::mutate(sentence_split = get_sentences(string.value))%$%
+    sentiment_by(sentence_split, list(section))
+
+plot(sentence_out)
+
+```
+
+### Compare this analysis with the analysis you did in Task TWO
+
+It is difficult to directly compare Sentimentr and Bing's score. Therefore, I apply `scale` function to keep two variable into the same criteria. Then I use ggplot to plot bar plot. From the Figure below, we can see that the trends, say positive and negetive direction, are mainly similar. But the exact number differs from two methods. It is difficult to identify which side is more optimistic. However, in some sections, say section 1,3,7,9,11,13,14, bing method is more optimistic than sentimentr method. When it comes to other sections, sentimentr method is more optimistic than bing method. But generally, these two methods' score have similar positive and negative trends after scaling.
+
+```{r fig.cap="sentiment comparison"}
+# create a new bing with index=chapter
+new_bing<-tidy_books %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al.") %>% 
+    count(method, index = chapter, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+# scale sentiment to keep unit same 
+new_bing2<-new_bing %>% mutate(bing_scale=scale(sentiment)) %>% select(method,index,bing_scale)
+# change colname in order to join by section
+colnames(new_bing2)[2]='section'
+# scale sentiment to keep unit same 
+sentence_out<-sentence_out %>% mutate(sentimentr_scale=scale(ave_sentiment))
+# join two df
+sentence_out_2method<-left_join(sentence_out,new_bing2,by='section')%>% select(section,bing_scale,sentimentr_scale)
+# use pivot longer for ggplot
+sentence_out_2method_plot<-sentence_out_2method %>% pivot_longer(cols=c('sentimentr_scale','bing_scale'),names_to = 'sentiment')
+# create barplot to compare
+sentence_out_2method_plot %>%ggplot(aes(y=value,x=factor(section))) +
+  geom_bar(aes(fill=factor(sentiment)),stat='identity',position = "dodge",width = 0.7)+theme_bw()
+
+```
+
+\newpage
+
+
+### EXTRA CREDIT: character analysis
+
+Baron and Edger are two main character among the fiction book. I Pick these two characters from my book.     
+The following table in the count number of times each character appears in each chapter:
+
+```{r}
+#theme(legend.key.size = unit(2, 'cm'),legend.title = element_text(size=30),legend.text = element_text(size=30))
+# use regular expression to find two main characters
+book_sentence_indi<-book_sentence %>% mutate(baron=str_match(book_sentence$string.value,regex('([Bb]aron)'))[,1],
+                         edgar=str_match(book_sentence$string.value,regex('(Edgar)'))[,1])
+# use sentiment_by to get the score
+score<-book_sentence_indi %>% dplyr::mutate(sentence_split = get_sentences(string.value))%$%
+    sentiment_by(sentence_split) %>% `$`(ave_sentiment)
+
+# count two characters' time in each chapter
+book_sentence_indi$score<-score
+re<-book_sentence_indi %>% group_by(section) %>% summarise(baron=sum(baron %>% is.na() %>% `!`()),
+                                                       edgar=sum(edgar%>% is.na() %>% `!`()))
+
+#knitr::kable(re,'simple')
+# use group by to display the result
+re2<-book_sentence_indi %>% group_by(section,paragraph) %>% summarise(
+  both_appear=sum(baron %>% is.na() %>% `!`() & edgar%>% is.na() %>% `!`() ))
+
+#re2 %>% filter(both_appear>0)
+#knitr::kable(re2 %>% filter(both_appear>0),'simple')
+```
+
+chapter    baron   edgar
+--------  ------  ------
+       1      10       2
+       2      22      17
+       3      18      16
+       4      13      12
+       5       9       5
+       6      16      18
+       7      12      13
+       8      15      24
+       9      13      19
+      10       8      14
+      11      10      12
+      12       5      18
+      13       0      11
+      14       1      13
+      15       1      14
+
+
+
+
+The following table is the count of number of times both characters appear in the same paragraphs.
+
+
+ section   paragraph   both_appear
+--------  ----------  ------------
+       2           4             1
+       2          28             1
+       2          35             1
+       2          36             1
+       2          40             1
+       3           1             1
+       3          16             1
+       4           3             1
+       4           7             1
+       4          11             1
+       4          12             1
+       4          23             1
+       4          28             1
+       5           1             1
+       6           1             1
+       6           3             1
+       6          21             1
+       7           5             1
+       7           7             1
+       7           8             1
+       7           9             1
+       8           1             1
+       8           6             1
+       8          11             1
+       8          29             1
+       8          31             1
+       8          35             1
+       9           2             1
+       9          21             1
+       9          32             1
+       9          41             1
+      10          11             1
+      11           5             1
+      11          16             2
+
+
+```{r eval=F}
+
+
+tnum.getDBPathList(taxonomy="subject", levels=2)
+
+#tnBooksFromLines(time_machine$text, "wells/hw_time_1")
+
+q20<-tnum.query(query="zweig/test1# has *",max=100000)
+df20 <- tnum.objectsToDf(q20)
+df20 %>% view()
+q24<- tnum.query('zweig/test1/heading# has *',max=60)
+df24 <- tnum.objectsToDf(q24)
+df24 %>% view()
+
+q26<- tnum.query('zweig/test1# has text',max=6000)
+df26 <- tnum.objectsToDf(q26)
+df26 %>% view()
+
+
+# q24<- tnum.query('wells9/hw9/heading# has *',max=6000)
+# df24 <- tnum.objectsToDf(q24)
+# 
+# q22<-tnum.query('wells9/hw9/heading:0022# has *')
+# df22<-tnum.objectsToDf(q22)
+# ord_ch1 <-unlist( tnum.query('wells9/hw9/heading:0022# has ordinal') )
+# ord_ch2<-unlist(tnum.query('wells9/hw9/heading:0023# has ordinal'))
+# 
+# q25<-tnum.query('wells9/hw9/heading:0023# has *')
+# df25<-tnum.objectsToDf(q25)
+#   
+# ch1_txt<-tnum.query('wells9/hw9/section:0022/paragraph:0002# has text',max=30)
+# ch1_txt_df<-tnum.objectsToDf(ch1_txt)
+# ch1_txt_df$string.value
+# 
+# ch2_txt<-tnum.query('wells9/hw9/section:0022/paragraph:0002/sentence:# has *',max=30)
+# 
+# ch2_txt_df<-tnum.objectsToDf(ch2_txt)
+# ch2_txt_df$string.value
+# 
+# length(ch2_txt_df$string.value)
+# 
+# 
+# q21<-tnum.query('wells9/hw9/section:0022/paragraph:0001/# has *',max=30)
+# df21<-tnum.objectsToDf(q21)
+# 
+# library(sentimentr)
+# 
+# my_book$text[105:145] %>% sentiment()
+```
+
