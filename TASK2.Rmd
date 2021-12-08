@@ -135,7 +135,7 @@ Figure 2 shows negative and positive word count of each word. For the negative c
 ```{r fig.width=6, fig.height=4,fig.cap='word cloud'}
 library(wordcloud)
 # set seed to control the same plot
-set.seed(123)
+set.seed(121)
 # use wordcloud package to plot wordcloud
 tidy_books %>%
   anti_join(stop_words) %>%
