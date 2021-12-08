@@ -184,3 +184,8 @@ LM%>%ggplot(aes(index, sentiment, fill = method)) +
 
 Then I provide some description. According to the introduction of [https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html), this lexicon is created for use with financial documents. Therefore, the graph is complete different from previous lexicon graphs. Therefore, this lexicon cannot correctly reflect the exact sentiment of the book. After all, financial sentiment lexicon isn't necessarily suitable for fiction book.
 
+
+## Reference 
+
+[https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)    
+[https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)

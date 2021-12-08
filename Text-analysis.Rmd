@@ -405,3 +405,7 @@ df26 %>% view()
 # my_book$text[105:145] %>% sentiment()
 ```
 
+## Reference 
+
+[https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)    
+[https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)
