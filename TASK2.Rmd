@@ -187,5 +187,6 @@ Then I provide some description. According to the introduction of [https://emilh
 
 ## Reference 
 
-[https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)    
-[https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)
+1.Litlovers. (unknown date). Burning Secret (Zweig)[Online]. Available from: [https://www.litlovers.com/reading-guides/13-reading-guides/fiction/9958-burning-secret-zweig](https://www.litlovers.com/reading-guides/13-reading-guides/fiction/9958-burning-secret-zweig)[accessed 1 December 2021]    
+2.Gutenberg. (unknown date). The Burning Secret by Stefan Zweig[Online]. Available from: [https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)[accessed 30 November 2021]    
+3.textdata. (unknown date). Loughran-McDonald sentiment lexicon[Online]. Available from: [https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)[accessed 7 December 2021]

@@ -111,7 +111,7 @@ plot(sentence_out)
 
 ### Compare this analysis with the analysis you did in Task TWO
 
-It is difficult to directly compare Sentimentr and Bing's score. Therefore, I apply `scale` function to keep two variable into the same criteria. Then I use ggplot to plot bar plot. From the Figure below, we can see that the trends, say positive and negetive direction, are mainly similar. But the exact number differs from two methods. Generally, sentimentr package is more optimictic than Bing method. 
+It is difficult to directly compare Sentimentr and Bing's score. Therefore, I apply `scale` function to keep two variable into the same criteria. Then I use ggplot to plot bar plot. From the Figure below, we can see that the trends, say positive and negetive direction, are mainly similar. But the exact number differs from two methods. It is difficult to identify which side is more optimistic. However, in some sections, say section 1,3,7,9,11,13,14, bing method is more optimistic than sentimentr method. When it comes to other sections, sentimentr method is more optimistic than bing method. But generally, these two methods' score have similar positive and negative trends after scaling.
 
 ```{r fig.cap="sentiment comparison"}
 # create a new bing with index=chapter
@@ -285,5 +285,6 @@ df26 %>% view()
 
 ## Reference 
 
-[https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)    
-[https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)
+1.Litlovers. (unknown date). Burning Secret (Zweig)[Online]. Available from: [https://www.litlovers.com/reading-guides/13-reading-guides/fiction/9958-burning-secret-zweig](https://www.litlovers.com/reading-guides/13-reading-guides/fiction/9958-burning-secret-zweig)[accessed 1 December 2021]    
+2.Gutenberg. (unknown date). The Burning Secret by Stefan Zweig[Online]. Available from: [https://www.gutenberg.org/ebooks/45755](https://www.gutenberg.org/ebooks/45755)[accessed 30 November 2021]    
+3.textdata. (unknown date). Loughran-McDonald sentiment lexicon[Online]. Available from: [https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html](https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html)[accessed 7 December 2021]
